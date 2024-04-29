@@ -32,7 +32,6 @@ def create_user(request):
 			VerificationCode.objects.create(verif_code=code_for_login, user=user, created=datetime.datetime.now())
 			request.session['verification_code'] = code_for_login
 			request.session['phone_number'] = correct_number
-
 			return redirect('auth_user')
 
 		return redirect('auth_user')
@@ -47,9 +46,7 @@ def auth_user(request):
 		user = User.objects.get(phone_number=phone_number)
 		verification_code = VerificationCode.objects.filter(user=user).last()
 		if str(verification_code) == entered_code:
-			request.user = user
-			user_profile_url = reverse('user_profile', kwargs={'phone_number': phone_number})
-			return redirect(user_profile_url)
+			return redirect('user', pk=user.pk)
 		else:
 			return Response(status=status.HTTP_401_UNAUTHORIZED)
 	return render(request, 'enter_verification_code.html')

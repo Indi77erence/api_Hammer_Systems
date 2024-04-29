@@ -4,28 +4,47 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import User
 from .serializer import UserSerializer
+from rest_framework import mixins
+from rest_framework import generics
 
 
-class UserProfileAPIView(APIView):
-    def get(self, request, phone_number):
-        try:
-            user = User.objects.get(phone_number=phone_number)
-            serializer = UserSerializer(user)
-            return Response(serializer.data)
-        except User.DoesNotExist:
-            raise NotFound("User not found")
+class UserList(mixins.ListModelMixin,
+			   mixins.CreateModelMixin,
+			   generics.GenericAPIView):
+	queryset = User.objects.all()
+	serializer_class = UserSerializer
 
-    def patch(self, request, phone_number):
-        try:
-            invite_code = request.data.get('invite_code')
-            invited_user = User.objects.get(invite_code=invite_code)
-            user = User.objects.get(phone_number=phone_number)
-            if not user.activated_invite_code:
-                user.set_invite_code(invite_code=invite_code)
-                invited_user.add_activated_invite_code(user.phone_number)
-                serializer = UserSerializer(user)
-                return Response(serializer.data)
-            else:
-                return Response({"error": "You have already activated invite code."}, status=status.HTTP_404_NOT_FOUND)
-        except User.DoesNotExist:
-            return Response({"error": "User with this invite code does not exist."}, status=status.HTTP_404_NOT_FOUND)
+	def get(self, request, *args, **kwargs):
+		return self.list(request, *args, **kwargs)
+
+	def post(self, request, *args, **kwargs):
+		return self.create(request, *args, **kwargs)
+
+
+class UserProfile(mixins.RetrieveModelMixin,
+				 mixins.UpdateModelMixin,
+				 mixins.DestroyModelMixin,
+				 generics.GenericAPIView,):
+
+	queryset = User.objects.all()
+	serializer_class = UserSerializer
+
+	def get(self, request, *args, **kwargs):
+		return self.retrieve(request, *args, **kwargs)
+
+	def post(self, request, *args, **kwargs):
+		return self.post(request, *args, **kwargs)
+
+	def put(self, request, *args, **kwargs):
+		data = request.data
+		user = User.objects.get(phone_number=data['phone_number'])
+		if not user.activated_invite_code:
+			code = data['activated_invite_code']
+			invited_user = User.objects.get(invite_code=code)
+			invited_user.add_activated_invite_code(user.phone_number)
+			return self.update(request, *args, **kwargs)
+		else:
+			return Response({"error": "You have already activated invite code."}, status=status.HTTP_404_NOT_FOUND)
+
+	def delete(self, request, *args, **kwargs):
+		return self.destroy(request, *args, **kwargs)

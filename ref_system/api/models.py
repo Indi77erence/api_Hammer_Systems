@@ -21,10 +21,6 @@ class User(models.Model):
             self.numbers_activated_invite_codes.append(phone_number)
             self.save()
 
-    def set_invite_code(self, invite_code):
-        self.activated_invite_code = invite_code
-        self.save()
-
 
 class RefCode(models.Model):
     code = models.CharField(max_length=6, null=True, unique=True)
