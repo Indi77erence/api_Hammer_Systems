@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import status
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
@@ -35,16 +36,17 @@ class UserProfile(mixins.RetrieveModelMixin,
 	def post(self, request, *args, **kwargs):
 		return self.post(request, *args, **kwargs)
 
-	def put(self, request, *args, **kwargs):
-		data = request.data
-		user = User.objects.get(phone_number=data['phone_number'])
-		if not user.activated_invite_code:
-			code = data['activated_invite_code']
-			invited_user = User.objects.get(invite_code=code)
-			invited_user.add_activated_invite_code(user.phone_number)
+	def patch(self, request, *args, **kwargs):
+		try:
+			invite_code = request.data['activated_invite_code']
+			if invite_code:
+				invited_user = User.objects.get(invite_code=invite_code)
+				invited_user.add_activated_invite_code(request.data['phone_number'])
+				return self.partial_update(request, *args, **kwargs)
 			return self.update(request, *args, **kwargs)
-		else:
-			return Response({"error": "You have already activated invite code."}, status=status.HTTP_404_NOT_FOUND)
+		except ObjectDoesNotExist:
+			return Response({'error': 'Пользователь с таким invite_code не найден'}, status=status.HTTP_404_NOT_FOUND)
+
 
 	def delete(self, request, *args, **kwargs):
 		return self.destroy(request, *args, **kwargs)
